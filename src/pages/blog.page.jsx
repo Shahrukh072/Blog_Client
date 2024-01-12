@@ -7,6 +7,7 @@ import { getDay } from "../common/date";
 import BlogInteraction from "../components/blog-interaction.component";
 import BlogPostCard from "../components/blog-post.component";
 import BlogContent from "../components/blog-content.component";
+import CommentsContainer, { fetchComments } from "../components/comments.component";
 
 export const blogStructure ={
     title: '',
@@ -28,14 +29,18 @@ const BlogPage = () =>{
     const [similarBlogs, setSimilarBlog] = useState(null);
     const [loading, setLoading] = useState(true);
     const [islikedByUsers, setLikedByUsers] = useState(false);
+    const [commentsWrapper, setCommentsWrapper] = useState(false);
+    const [totalParentCommentLoaded, setTotalParentCommentLoaded] = useState(0);
 
     let {title, content,  banner, author: {personal_info: {fullname, username: author_username, profile_img}}, publishedAt} = blog;
 
     const fetchBlog = () =>{
 
         axios.post("http://localhost:4040/get-blog", {blog_id})
-        .then(({data: {blog}}) =>{
-
+        .then(async({data: {blog}}) =>{
+            
+            blog.comments = await fetchComments({blog_id: blog._id, setParentCommentCountFun: setTotalParentCommentLoaded})
+            
             setBlog(blog);
 
             axios.post("http://localhost:4040/search-blogs", {tag: blog.tags[0], limit: 6, eliminate_blog: blog_id})
@@ -61,6 +66,9 @@ const BlogPage = () =>{
         setBlog(blogStructure);
         setSimilarBlog(null);
         setLoading(true);
+        setLikedByUsers(false);
+        setCommentsWrapper(false);
+        setTotalParentCommentLoaded(0);
     }
 
 
@@ -69,7 +77,9 @@ const BlogPage = () =>{
        {
         loading ? <Loader />
         :
-        <BlogContext.Provider value={{blog, setBlog, islikedByUsers, setLikedByUsers}}>
+        <BlogContext.Provider value={{blog, setBlog, islikedByUsers, setLikedByUsers, commentsWrapper, setCommentsWrapper, totalParentCommentLoaded, setTotalParentCommentLoaded}}>
+
+            <CommentsContainer />
         <div className="max-w-[900px] center py-10 max-lg:px-[5vw]">
             <img src={banner} className="aspect-video" />
 

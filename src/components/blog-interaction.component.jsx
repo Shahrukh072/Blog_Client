@@ -1,12 +1,14 @@
-import { useContext } from "react";
+import { useContext, useEffect } from "react";
 import { BlogContext } from "../pages/blog.page";
 import { Link } from "react-router-dom";
 import { UserContext } from "../App";
 import{Toaster, toast } from "react-hot-toast";
+import axios from "axios";
 
 const BlogInteraction = () => {
   let {
    blog,  blog: {
+      _id,
       title,
       blog_id,
       activity,
@@ -15,10 +17,26 @@ const BlogInteraction = () => {
         personal_info: { username: author_username },
       },
     },
-    setBlog, islikedByUsers, setLikedByUsers
+    setBlog, islikedByUsers, setLikedByUsers,  setCommentsWrapper
   } = useContext(BlogContext);
 
   let {userAuth: {username, access_token} } = useContext(UserContext);
+
+  useEffect(() =>{
+    if(access_token){
+      axios.post("http://localhost:4040/isliked-by-user",{ _id }, {
+        headers:{
+          'Authorization':`Bearer ${access_token}`
+        }
+      })
+        .then(({data: { result }}) =>{
+          setLikedByUsers(Boolean(result))
+        })
+        .catch(err =>{
+          console.log(err)
+        }) 
+    }
+  },[])
 
   const handleLike = () =>{
       if(access_token){
@@ -27,6 +45,19 @@ const BlogInteraction = () => {
          !islikedByUsers ? total_likes++ : total_likes--;
 
          setBlog({ ...blog, activity: { ...activity, total_likes}})
+
+         axios.post("http://localhost:4040/like-blog", {_id, islikedByUsers},{
+          headers:{
+            'Authorization':`Bearer ${access_token}`
+          }
+        })
+          .then(({data}) =>{
+            console.log(data)
+          })
+          .catch(err =>{
+            console.log(err)
+          })                
+        
       }else{
         toast.error("Please login to like the blog");
       }
@@ -40,12 +71,14 @@ const BlogInteraction = () => {
         <div className="flex gap-3 items-center">
           <button
           onClick={handleLike}
-          className="w-10 h-10 rounded-full flex items-center justify-center bg-grey/80">
-            <i className="fi fi-rr-heart"></i>
+          className={"w-10 h-10 rounded-full flex items-center justify-center " + ( islikedByUsers ? "bg-red/20 text-red" : "bg-grey/80") }>
+            <i className={"fi " + (islikedByUsers ? "fi-sr-heart" : "fi-rr-heart")}></i>
           </button>
           <p className="text-xl text-dark-grey">{total_likes}</p>
 
-          <button className="w-10 h-10 rounded-full flex items-center justify-center bg-grey/80">
+          <button 
+          onClick={() => setCommentsWrapper(preval => !preval)}
+          className="w-10 h-10 rounded-full flex items-center justify-center bg-grey/80">
             <i className="fi fi-sr-comment-dots"></i>
           </button>
           <p className="text-xl text-dark-grey">{total_comments}</p>
